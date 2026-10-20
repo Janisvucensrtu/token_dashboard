@@ -16,9 +16,10 @@ p.sub{color:var(--muted);margin:0 0 20px}
 .warn{border-left:4px solid var(--err);color:var(--err);font-weight:600}
 .row{display:flex;gap:12px;flex-wrap:wrap}
 .coin{flex:1 1 240px;border-top:4px solid var(--line)}
-.coin.a{border-top-color:var(--gold)} .coin.b{border-top-color:var(--silv)}
+.coin:nth-child(1){border-top-color:var(--gold)} .coin:nth-child(2){border-top-color:var(--silv)}
 .coin .sym{font-weight:700;font-size:1.1rem}
 .coin .bal{font-size:1.8rem;font-variant-numeric:tabular-nums;margin:4px 0}
+.coin .name{font-size:.85rem;color:var(--muted)}
 .coin .meta{font-size:.8rem;color:var(--muted);word-break:break-all}
 label{display:block;font-weight:600;margin:12px 0 4px}
 input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
@@ -42,10 +43,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
     <p class="addr" id="account">Not connected</p>
   </section>
 
-  <section class="row" aria-label="Balances">
-    <div class="panel coin a"><div class="sym" id="symA">Token A</div><div class="bal" id="balA">-</div><div class="meta" id="addrA"></div></div>
-    <div class="panel coin b"><div class="sym" id="symB">Token B</div><div class="bal" id="balB">-</div><div class="meta" id="addrB"></div></div>
-  </section>
+  <section class="row" id="tokens" aria-label="Balances"><div class="panel">Connect your wallet to see your tokens.</div></section>
 
   <section class="panel">
     <h2 style="margin:0 0 4px;font-size:1.1rem">Send tokens</h2>
