@@ -1,12 +1,15 @@
 // ====== EDIT THESE after deploying to Sepolia ======
-const TOKENS = [
-  { key: "A", address: "0xYOUR_GOLD_COIN_ADDRESS" },
-  { key: "B", address: "0xYOUR_SILVER_COIN_ADDRESS" },
+// Your two assignment tokens. They are always shown, even if the indexer is slow.
+const MY_TOKENS = [
+  "0x9D76CeA4e53Bdb277ecaF83E823781b0f2d4b7D8",
 ];
 // ===================================================
 
 const SEPOLIA_ID = 11155111n;
 const SEPOLIA_HEX = "0xaa36a7";
+// Public, keyless indexer used only to DISCOVER which tokens a wallet holds.
+// Balances themselves are always read directly from the blockchain.
+const INDEXER = "https://eth-sepolia.blockscout.com/api/v2/addresses/";
 const ABI = [
   "function name() view returns (string)",
   "function symbol() view returns (string)",
@@ -16,7 +19,8 @@ const ABI = [
 ];
 
 const $ = (id) => document.getElementById(id);
-let provider, signer, account, info = {}; // info[key] = {contract, symbol, decimals, raw}
+let provider, signer, account;
+let tokens = {}; // tokens[lowercaseAddress] = {contract, name, symbol, decimals, address}
 
 function setStatus(msg, cls = "") {
   const el = $("status");
@@ -46,25 +50,71 @@ async function switchToSepolia() {
   } catch (e) { /* user can switch manually; warning banner stays visible */ }
 }
 
-async function loadBalances() {
-  for (const t of TOKENS) {
-    try {
-      if (!ethers.isAddress(t.address)) throw new Error("Set a valid token address in app.js");
-      const c = new ethers.Contract(t.address, ABI, signer);
-      const [symbol, decimals, raw] = await Promise.all([c.symbol(), c.decimals(), c.balanceOf(account)]);
-      info[t.key] = { contract: c, symbol, decimals, raw, address: t.address };
-      $("sym" + t.key).textContent = symbol;
-      $("bal" + t.key).textContent = ethers.formatUnits(raw, decimals);
-      $("addr" + t.key).textContent = t.address;
-    } catch (e) {
-      $("bal" + t.key).textContent = "n/a";
-      setStatus("Could not read token " + t.key + ": " + (e.shortMessage || e.message), "err");
+// Ask the indexer which ERC-20 contracts this wallet holds.
+async function discoverTokenAddresses() {
+  const found = [];
+  try {
+    const res = await fetch(INDEXER + account + "/token-balances");
+    if (!res.ok) throw new Error("indexer " + res.status);
+    const list = await res.json();
+    for (const item of list) {
+      const t = item.token || {};
+      const addr = t.address_hash || t.address;
+      if (addr && (!t.type || t.type === "ERC-20") && ethers.isAddress(addr)) found.push(addr);
     }
+  } catch (e) {
+    setStatus("Could not load the full token list; showing your assignment tokens only.", "err");
   }
+  return found;
+}
+
+async function readToken(address) {
+  try {
+    const c = new ethers.Contract(address, ABI, signer);
+    const [name, symbol, decimals, raw] = await Promise.all([
+      c.name().catch(() => ""), c.symbol(), c.decimals(), c.balanceOf(account),
+    ]);
+    return { contract: c, name, symbol, decimals, raw, address };
+  } catch (e) {
+    return null; // not a standard ERC-20, skip it
+  }
+}
+
+function renderTokens(list) {
+  const box = $("tokens");
+  box.replaceChildren();
+  for (const t of list) {
+    const card = document.createElement("div");
+    card.className = "panel coin";
+    const sym = document.createElement("div"); sym.className = "sym"; sym.textContent = t.symbol;
+    const nm = document.createElement("div"); nm.className = "name"; nm.textContent = t.name;
+    const bal = document.createElement("div"); bal.className = "bal"; bal.textContent = ethers.formatUnits(t.raw, t.decimals);
+    const ad = document.createElement("div"); ad.className = "meta"; ad.textContent = t.address;
+    card.append(sym, nm, bal, ad);
+    box.append(card);
+  }
+  if (!list.length) box.innerHTML = '<div class="panel">No tokens found.</div>';
+}
+
+async function loadBalances() {
+  const addrs = new Map();
+  for (const a of MY_TOKENS) if (ethers.isAddress(a)) addrs.set(a.toLowerCase(), a);
+  for (const a of await discoverTokenAddresses()) if (!addrs.has(a.toLowerCase())) addrs.set(a.toLowerCase(), a);
+
+  const results = (await Promise.all([...addrs.values()].map(readToken))).filter(Boolean);
+  // Keep tokens you hold, plus your assignment tokens even at zero balance.
+  const mine = new Set(MY_TOKENS.map((a) => a.toLowerCase()));
+  const shown = results.filter((t) => t.raw > 0n || mine.has(t.address.toLowerCase()));
+  shown.sort((a, b) => (mine.has(b.address.toLowerCase()) ? 1 : 0) - (mine.has(a.address.toLowerCase()) ? 1 : 0));
+
+  tokens = {};
   const sel = $("token");
-  if (!sel.options.length) {
-    for (const t of TOKENS) if (info[t.key]) sel.add(new Option(info[t.key].symbol, t.key));
+  sel.replaceChildren();
+  for (const t of shown) {
+    tokens[t.address.toLowerCase()] = t;
+    sel.add(new Option(t.symbol, t.address.toLowerCase()));
   }
+  renderTokens(shown);
 }
 
 async function connect() {
@@ -76,14 +126,14 @@ async function connect() {
     signer = await provider.getSigner();
     account = await signer.getAddress();
     $("account").textContent = account;
-    if (await checkNetwork()) { await loadBalances(); setStatus("Connected."); }
+    if (await checkNetwork()) { setStatus("Loading tokens..."); await loadBalances(); if ($("status").className !== "err") setStatus("Connected."); }
   } catch (e) { showError(e); }
 }
 
 async function send() {
   try {
     if (!(await checkNetwork())) throw new Error("Wrong network. Switch to Ethereum Sepolia.");
-    const t = info[$("token").value];
+    const t = tokens[$("token").value];
     if (!t) throw new Error("Select a token.");
     const to = $("to").value.trim();
     if (!ethers.isAddress(to)) throw new Error("Invalid recipient address.");
