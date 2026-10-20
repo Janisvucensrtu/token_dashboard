@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GOLD &amp; SILV Transfer Dashboard (Sepolia)</title>
+<style>
+:root{--bg:#eef2f5;--panel:#fff;--ink:#1b2a3a;--muted:#5b6b7a;--line:#d3dbe3;--gold:#b07d0c;--silv:#5f7385;--ok:#1f7a4d;--err:#b3261e;--accent:#1b4f72}
+@media (prefers-color-scheme:dark){:root{--bg:#121a22;--panel:#1b2631;--ink:#e6edf3;--muted:#97a6b4;--line:#2d3b49;--gold:#e2b04a;--silv:#a9bccb;--ok:#58c28a;--err:#ff8a80;--accent:#7fb7de}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:720px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px}
+p.sub{color:var(--muted);margin:0 0 20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.warn{border-left:4px solid var(--err);color:var(--err);font-weight:600}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.coin{flex:1 1 240px;border-top:4px solid var(--line)}
+.coin.a{border-top-color:var(--gold)} .coin.b{border-top-color:var(--silv)}
+.coin .sym{font-weight:700;font-size:1.1rem}
+.coin .bal{font-size:1.8rem;font-variant-numeric:tabular-nums;margin:4px 0}
+.coin .meta{font-size:.8rem;color:var(--muted);word-break:break-all}
+label{display:block;font-weight:600;margin:12px 0 4px}
+input,select{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+button{padding:10px 18px;border:0;border-radius:6px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#status{min-height:1.5em;margin-top:12px;word-break:break-word}
+#status.ok{color:var(--ok)} #status.err{color:var(--err)}
+.addr{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.9rem;word-break:break-all}
+</style>
+</head>
+<body>
+<main>
+  <h1>GOLD &amp; SILV dashboard</h1>
+  <p class="sub">Check your balances and send tokens on Ethereum Sepolia. Test tokens only, no real value.</p>
+
+  <div id="netWarn" class="panel warn" hidden>Wrong network. Switch MetaMask to Ethereum Sepolia (chain ID 11155111).</div>
+
+  <section class="panel">
+    <button id="connectBtn">Connect wallet</button>
+    <p class="addr" id="account">Not connected</p>
+  </section>
+
+  <section class="row" aria-label="Balances">
+    <div class="panel coin a"><div class="sym" id="symA">Token A</div><div class="bal" id="balA">-</div><div class="meta" id="addrA"></div></div>
+    <div class="panel coin b"><div class="sym" id="symB">Token B</div><div class="bal" id="balB">-</div><div class="meta" id="addrB"></div></div>
+  </section>
+
+  <section class="panel">
+    <h2 style="margin:0 0 4px;font-size:1.1rem">Send tokens</h2>
+    <label for="token">Token</label>
+    <select id="token"></select>
+    <label for="to">Recipient address</label>
+    <input id="to" placeholder="0x..." autocomplete="off" spellcheck="false">
+    <label for="amount">Amount</label>
+    <input id="amount" inputmode="decimal" placeholder="1.0" autocomplete="off">
+    <p style="margin:16px 0 0"><button id="sendBtn" disabled>Send</button></p>
+    <div id="status" role="status" aria-live="polite"></div>
+  </section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.13.4/dist/ethers.umd.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
